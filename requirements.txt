@@ -1,0 +1,15 @@
+# PDF Processing
+PyMuPDF==1.20.2  # Used for text extraction, bounding box retrieval, and highlighting
+PyPDF2==3.0.1    # Used for merging OCR-processed pages into complete PDFs
+pdf2image==1.16.3 # Converts PDFs to images for OCR processing
+
+# Optical Character Recognition (OCR)
+pytesseract==0.3.10 # Extracts text from scanned PDFs/images
+
+# Machine Learning for Text Similarity
+scikit-learn==1.3.0  # Implements TF-IDF & Cosine Similarity for text matching
+
+# System Utilities
+shutil  # Handles folder cleanup (Intermediary and Output)
+logging # Provides logging for debugging
+subprocess # Automates script execution in main.py
