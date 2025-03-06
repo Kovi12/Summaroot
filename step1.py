@@ -2,19 +2,18 @@ import json
 import logging
 import os
 import shutil
-import fitz  # PyMuPDF for PDF processing
+import fitz
 import pytesseract
 from pdf2image import convert_from_path
 from PyPDF2 import PdfMerger
 
-# Configure logging
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def clear_intermediary_folder(folder_path):
-    """Completely delete and recreate the Intermediary folder to ensure a fresh start."""
     if os.path.exists(folder_path):
-        shutil.rmtree(folder_path)  # Delete everything inside the folder
-    os.makedirs(folder_path)  # Recreate the empty folder
+        shutil.rmtree(folder_path)
+    os.makedirs(folder_path)
 
 def ocr_and_save_pdf(pdf_path, output_path):
     """Convert scanned pages to OCR-processed PDFs and save the complete document."""
@@ -43,22 +42,52 @@ def ocr_and_save_pdf(pdf_path, output_path):
     logging.info(f"OCR-processed PDF saved: {output_path}")
 
 def extract_text_with_blocks(pdf_path):
-    """Extract text and bounding boxes from OCR-processed PDF."""
+    """Extract words, then merge them into larger bounding boxes."""
     doc = fitz.open(pdf_path)
     extracted_data = []
 
     for page_num, page in enumerate(doc):
-        text_blocks = page.get_text("blocks")
-        page_data = [
-            {"text": block[4], "bbox": list(block[:4]), "page": page_num + 1}
-            for block in text_blocks if block[4].strip()
-        ]
-        extracted_data.extend(page_data)
+        words = page.get_text("words")  # Extract words instead of blocks
+        words.sort(key=lambda w: (w[1], w[0]))  # Sort words by y, then x
+
+        if not words:
+            continue
+
+        current_text = []
+        current_bbox = list(words[0][:4])  # Start with first word's bbox
+
+        for word in words:
+            x0, y0, x1, y1, text, *_ = word
+
+            # If close enough vertically, merge into the same bounding box
+            if abs(y0 - current_bbox[1]) < 250:
+                current_text.append(text)
+                current_bbox[0] = min(current_bbox[0], x0)
+                current_bbox[1] = min(current_bbox[1], y0)
+                current_bbox[2] = max(current_bbox[2], x1)
+                current_bbox[3] = max(current_bbox[3], y1)
+            else:
+                # Save the last paragraph-sized bbox and reset
+                extracted_data.append({
+                    "text": " ".join(current_text),
+                    "bbox": current_bbox,
+                    "page": page_num + 1
+                })
+                current_text = [text]
+                current_bbox = [x0, y0, x1, y1]
+
+        # Save last detected paragraph
+        if current_text:
+            extracted_data.append({
+                "text": " ".join(current_text),
+                "bbox": current_bbox,
+                "page": page_num + 1
+            })
 
     return extracted_data
 
+
 def save_extracted_data(output_path, text_data):
-    """Save extracted text and block locations as JSON."""
     try:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
@@ -68,7 +97,6 @@ def save_extracted_data(output_path, text_data):
         logging.error(f"Error saving extracted text: {e}")
 
 def process_pdf(pdf_path, output_folder):
-    """Process PDF: Apply OCR, extract text with block locations, and save JSON."""
     filename = os.path.splitext(os.path.basename(pdf_path))[0]
     ocr_pdf_path = os.path.join(output_folder, f"{filename}_ocr.pdf")
     json_output_path = os.path.join(output_folder, f"{filename}.json")
