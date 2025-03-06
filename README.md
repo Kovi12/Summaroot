@@ -18,7 +18,7 @@ A **main script (`main.py`)** runs the entire pipeline sequentially.
 │── Input/                   # Folder where input PDFs should be placed
 │   ├── group1/              # Example group folder
 │   │   ├── sources/         # Source PDFs
-│   │   ├── summary/         # Summary PDFs
+│   │   ├── summary          # Summary PDF
 │── Intermediary/            # Stores OCR-processed PDFs and extracted text
 │── Output/                  # Stores final highlighted PDFs
 │── step1.py                 # OCRs PDFs and extracts text with bounding boxes
@@ -94,8 +94,7 @@ Input/
     ├── sources/
     │   ├── document_1.pdf
     │   ├── document_2.pdf
-    ├── summary/
-    │   ├── summary.pdf
+    ├── summary.pdf 
 ```
 ### **After Processing (`Output/`)**
 ```
